@@ -13,6 +13,12 @@ using namespace Zeptomoby::OrbitTools;
 class Calculator
 {
 public:
+    vector<TrackPoint> ComputeTrack(string SatID, string SatName, string line1, string line2,
+        long StartTime, long EndTime,int StepTimeInSec){
+        Satellite sat(SatID, SatName);
+        sat.SetCurTLE("", line1, line2);
+        return sat.ComputeTrack2(StartTime, EndTime,StepTimeInSec);
+    }
     vector<CRegion> SensorInRegion(string SatID, string SatName, string line1, string line2,
         vector<Sensor> SenList, long StartTime, long EndTime, TargetArea area)
     {
@@ -156,10 +162,13 @@ EMSCRIPTEN_BINDINGS(calculator_module)
 
     // 绑定 vector<MyPoint>
     emscripten::register_vector<MyPoint>("VectorMyPoint");
+    
+    // 绑定 vector<TrackPoint>
+    emscripten::register_vector<TrackPoint>("VectorTrackPoint");
 
     emscripten::class_<Calculator>("Calculator")
         .constructor<>()
         .function("calPath", &Calculator::calPath)
-        .function("ComputeTrack2", &Satellite::ComputeTrack2)
+        .function("ComputeTrack2", &Calculator::ComputeTrack)
         .function("SensorInRegion", &Calculator::SensorInRegion);
 }
