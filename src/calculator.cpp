@@ -160,5 +160,6 @@ EMSCRIPTEN_BINDINGS(calculator_module)
     emscripten::class_<Calculator>("Calculator")
         .constructor<>()
         .function("calPath", &Calculator::calPath)
+        .function("ComputeTrack2", &Satellite::ComputeTrack2)
         .function("SensorInRegion", &Calculator::SensorInRegion);
 }
