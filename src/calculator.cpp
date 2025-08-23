@@ -17,7 +17,7 @@ public:
         long StartTime, long EndTime,int StepTimeInSec){
         Satellite sat(SatID, SatName);
         sat.SetCurTLE("", line1, line2);
-        return sat.ComputeTrack2(StartTime, EndTime,StepTimeInSec);
+        return sat.ComputeTrack(StartTime, EndTime,StepTimeInSec);
     }
     vector<CRegion> SensorInRegion(string SatID, string SatName, string line1, string line2,
         vector<Sensor> SenList, long StartTime, long EndTime, TargetArea area)
@@ -169,6 +169,6 @@ EMSCRIPTEN_BINDINGS(calculator_module)
     emscripten::class_<Calculator>("Calculator")
         .constructor<>()
         .function("calPath", &Calculator::calPath)
-        .function("ComputeTrack2", &Calculator::ComputeTrack)
+        .function("ComputeTrack", &Calculator::ComputeTrack)
         .function("SensorInRegion", &Calculator::SensorInRegion);
 }

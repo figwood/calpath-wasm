@@ -83,7 +83,7 @@ public:
 
   MyPoint GetSatPosGeo(DateTime Dt);
   MyPoint GetSatPosEci(DateTime Dt);
-  vector<TrackPoint> ComputeTrack2(DateTime StartTime, DateTime EndTime, int StepTimeInSec);
+  vector<TrackPoint> ComputeTrack(DateTime StartTime, DateTime EndTime, int StepTimeInSec);
   vector<CRegion> SensorInRegion(vector<Sensor> *SenList,long StartTime, long EndTime, TargetArea *area);
 };
 #endif

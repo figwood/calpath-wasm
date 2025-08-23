@@ -289,7 +289,7 @@ void Satellite::MatrixReverse(double m[][3], double res[][3])
 }
 
 // compute with vector
-vector<TrackPoint> Satellite::ComputeTrack2(DateTime StartTime, DateTime EndTime, int StepTimeInSec)
+vector<TrackPoint> Satellite::ComputeTrack(DateTime StartTime, DateTime EndTime, int StepTimeInSec)
 {
   double R = 6378.15;
 
@@ -384,7 +384,7 @@ vector<CRegion> Satellite::SensorInRegionWithStep(vector<CRegion> InputRegions, 
     DateTime stopTime = inputRegion.getStopTime();
 
     // 提前计算轨道点以便重用，避免多次计算
-    vector<TrackPoint> TrackPoints = ComputeTrack2(startTime, stopTime, StepTimeInSec);
+    vector<TrackPoint> TrackPoints = ComputeTrack(startTime, stopTime, StepTimeInSec);
 
     DateTime lastStopTime = stopTime.AddSeconds(-StepTimeInSec);
     DateTime curTime = startTime;
