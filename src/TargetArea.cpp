@@ -1,8 +1,11 @@
 #include "TargetArea.h"
+#include "Logger.h"
 #include "stdlib.h"
 #include <cmath>
 #include <time.h>
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 using namespace std;
 
 TargetArea::TargetArea(string ID, string Name, vector<MyPoint> Geometry)
@@ -47,8 +50,10 @@ TargetArea::TargetArea(double left, double right, double top, double bottom)
     m_Top = top;
     m_Bottom = bottom;
     
-    cout << "创建 TargetArea - 边界值: 左=" << left << ", 右=" << right 
-         << ", 上=" << top << ", 下=" << bottom << endl;
+    stringstream ss;
+    ss << "Creating TargetArea - Boundaries: left=" << left << ", right=" << right 
+       << ", top=" << top << ", bottom=" << bottom;
+    log_message(LOG_INFO, ss.str());
     
     // Create geometry from the boundaries
     vector<MyPoint> points;
@@ -60,10 +65,15 @@ TargetArea::TargetArea(double left, double right, double top, double bottom)
     points.push_back(MyPoint(left, bottom, 0)); // Back to bottom-left to close the shape
     m_Geometry = points;
     
-    cout << "创建的几何形状包含 " << m_Geometry.size() << " 个点" << endl;
+    stringstream ss2;
+    ss2 << "Created geometry with " << m_Geometry.size() << " points";
+    log_message(LOG_INFO, ss2.str());
+    
     for (int i = 0; i < m_Geometry.size(); i++) {
-        cout << "点 " << i+1 << ": (" << m_Geometry[i].getX() << ", " 
-             << m_Geometry[i].getY() << ", " << m_Geometry[i].getZ() << ")" << endl;
+        stringstream pointInfo;
+        pointInfo << "Point " << (i+1) << ": (" << m_Geometry[i].getX() << ", " 
+                  << m_Geometry[i].getY() << ", " << m_Geometry[i].getZ() << ")";
+        log_message(LOG_DEBUG, pointInfo.str());
     }
 }
 void TargetArea::VariablesInit()
@@ -74,9 +84,7 @@ void TargetArea::VariablesInit()
 }
 void TargetArea::DefaultStyleInit()
 {
-    //cout<<"getting area color"<<endl;
     GetRandomColor(&m_AreaColor, 0, 255, 150);
-    //cout<<"getting outline color"<<endl;
     GetRandomColor(&m_OutLineColor, 0, 100, 255);
     m_OutLineWidth = 2;
 }
@@ -92,7 +100,7 @@ void TargetArea::GetRandomColor(Color **pColor, int Min, int Max, int Alpha)
 
 int TargetArea::GetRandomValue(int Min, int Max)
 {
-    srand((unsigned)time(NULL)); //初始化随机数种子
+    srand((unsigned)time(NULL)); // Initialize random seed
     return (rand() % (Max - Min + 1)) + Min;
 }
 TargetArea::~TargetArea()

@@ -19,6 +19,7 @@ set(SOURCES
     src/CRegion.cpp
     src/DateTime.cpp
     src/JulianConvert.cpp
+    src/Logger.cpp
     src/MyPoint.cpp
     src/RelationOperator.cpp
     src/Satellite.cpp
@@ -49,6 +50,7 @@ set(HEADERS
     src/CRegion.h
     src/DateTime.h
     src/JulianConvert.h
+    src/Logger.h
     src/MyPoint.h
     src/RelationOperator.h
     src/Satellite.h

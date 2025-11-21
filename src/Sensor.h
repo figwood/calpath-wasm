@@ -7,28 +7,28 @@ class Sensor
 {
 private:
   string m_SatId, m_SenName, m_SatName;
-  int m_SenId; // 传感器ID
+  int m_SenId; // Sensor ID
   string m_CountryName;
   double m_Width;
-  double m_ObsAngle; //观测角
-  double m_CurSideAngle; //当前的侧摆角
+  double m_ObsAngle; // Observation angle
+  double m_CurSideAngle; // Current side swing angle
   double m_Resolution;
-  double m_RightSideAngle; //向右侧摆的角度
-  double m_LeftSideAngle;  //向左侧摆的角度
-  double m_InitAngle;      //载荷安装角
-  string m_HexColor; //十六进制颜色值
+  double m_RightSideAngle; // Right side swing angle
+  double m_LeftSideAngle;  // Left side swing angle
+  double m_InitAngle;      // Sensor installation angle
+  string m_HexColor; // Hexadecimal color value
   void Init();
 
 public:
   Sensor(string satId, string sensorName);
   Sensor();
-  Sensor(string satId,int senId,string satName,string sensorName, double initAngle, double sideAngle, double obsAngle); // 三参数构造函数
+  Sensor(string satId,int senId,string satName,string sensorName, double initAngle, double sideAngle, double obsAngle); // Three-parameter constructor
   ~Sensor();
 
   double getInitAngle() const { return m_InitAngle; }
   double getSideAngle() const { return m_CurSideAngle; }
   
-  // 设置方法
+  // Setter methods
   void setInitAngle(double value) { m_InitAngle = value; }
   void setSideAngle(double value) { m_CurSideAngle = value; }
 
@@ -64,7 +64,7 @@ public:
   double getWidth() const { return m_Width; }
   void setWidth(double value) { m_Width = value; }
   
-  // 向后兼容 - 用于 GetSensorPointsECI 等方法
+  // Backward compatibility - for methods like GetSensorPointsECI
   double getCurSideAngle() const { return m_CurSideAngle; }
   void setCurSideAngle(double value) { m_CurSideAngle = value; }
 };

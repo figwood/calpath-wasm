@@ -34,11 +34,11 @@ public:
         cOrbit satorbit(sattle);
         double lat, lon, alt, mins;
 
-        // 换算成绝对时间
+        // Convert to absolute time
         time_t ttNow = time(0);
         cJulian jul(ttNow);
         
-        // 使用当前时间创建 DateTime 对象
+        // Create DateTime object using current time
         tm* timeinfo = gmtime(&ttNow);
         DateTime curTime(timeinfo->tm_year + 1900, 
                        timeinfo->tm_mon + 1,
@@ -47,14 +47,14 @@ public:
                        timeinfo->tm_min,
                        timeinfo->tm_sec);
         
-        // 计算时间差
+        // Calculate time difference
         mins = (jul.Date() - satorbit.Epoch().Date()) * 1440;
-        // 计算得出xyz坐标
+        // Calculate xyz coordinates
         cEciTime eci = satorbit.PositionEci(mins);
 
-        // 换成经纬度
+        // Convert to latitude and longitude
         cGeoTime geo(eci);
-        // 把经度坐标换成-180到180之间
+        // Convert longitude to range -180 to 180
         lon = geo.LongitudeDeg();
         lon = lon > 180 ? lon - 360 : lon;
         lat = geo.LatitudeDeg();
@@ -63,14 +63,14 @@ public:
         cVector pos = eci.Position();
         cVector vel = eci.Velocity();
 
-        // 创建并返回轨道点
+        // Create and return track point
         return TrackPoint(curTime, lon, lat, alt, 
                          pos.m_x, pos.m_y, pos.m_z, 
                          vel.m_x, vel.m_y, vel.m_z);
     }
 };
 
-// 使用 Emscripten 绑定
+// Emscripten bindings
 EMSCRIPTEN_BINDINGS(calculator_module)
 {
     emscripten::class_<MyPoint>("MyPoint")
@@ -105,15 +105,15 @@ EMSCRIPTEN_BINDINGS(calculator_module)
         .function("getVel", &TrackPoint::getVel)
         .function("setVel", &TrackPoint::setVel);
 
-    // 添加 Sensor 类绑定
+    // Add Sensor class bindings
     emscripten::class_<Sensor>("Sensor")
         .constructor<>()
         .constructor<string,int,string,string,double, double, double>()
         .function("getInitAngle", &Sensor::getInitAngle)
         .function("getSideAngle", &Sensor::getCurSideAngle)
         .function("getObsAngle", &Sensor::getObsAngle)
-        .function("getWidth", &Sensor::getWidth)        // 添加获取宽度的方法
-        .function("getSenName", &Sensor::getSenName)    // 添加获取传感器名称的方法
+        .function("getWidth", &Sensor::getWidth)        // Add method to get width
+        .function("getSenName", &Sensor::getSenName)    // Add method to get sensor name
         .function("getHexColor", &Sensor::getHexColor)
         .function("setInitAngle", &Sensor::setInitAngle)
         .function("setSideAngle", &Sensor::setCurSideAngle)
@@ -121,7 +121,7 @@ EMSCRIPTEN_BINDINGS(calculator_module)
         .function("setHexColor", &Sensor::setHexColor)
         .function("setWidth", &Sensor::setWidth);
     
-    // 添加 Color 类绑定
+    // Add Color class bindings
     emscripten::class_<Color>("Color")
         .constructor<>()
         .constructor<int, int, int>()
@@ -129,7 +129,7 @@ EMSCRIPTEN_BINDINGS(calculator_module)
         .function("getG", &Color::getGreen)
         .function("getB", &Color::getBlue);
     
-    // 添加 CRegion 类绑定
+    // Add CRegion class bindings
     emscripten::class_<CRegion>("CRegion")
         .constructor<>()
         .function("getStartTimestamp", &CRegion::getStartTimestamp)
@@ -141,7 +141,7 @@ EMSCRIPTEN_BINDINGS(calculator_module)
         .function("getHexColor", &CRegion::getHexColor)
         .function("getpGeometry", &CRegion::getpGeometry);
     
-    // 添加 TargetArea 类绑定
+    // Add TargetArea class bindings
     emscripten::class_<TargetArea>("TargetArea")
         .constructor<>()
         .constructor<double, double, double, double>()
@@ -154,16 +154,16 @@ EMSCRIPTEN_BINDINGS(calculator_module)
         .function("setTop", &TargetArea::setTop)
         .function("setBottom", &TargetArea::setBottom);
     
-    // 绑定 vector<Sensor>
+    // Bind vector<Sensor>
     emscripten::register_vector<Sensor>("VectorSensor");
     
-    // 绑定 vector<CRegion>
+    // Bind vector<CRegion>
     emscripten::register_vector<CRegion>("VectorCRegion");
 
-    // 绑定 vector<MyPoint>
+    // Bind vector<MyPoint>
     emscripten::register_vector<MyPoint>("VectorMyPoint");
     
-    // 绑定 vector<TrackPoint>
+    // Bind vector<TrackPoint>
     emscripten::register_vector<TrackPoint>("VectorTrackPoint");
 
     emscripten::class_<Calculator>("Calculator")

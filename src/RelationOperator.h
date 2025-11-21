@@ -8,20 +8,20 @@ using namespace std;
 class RelationOperator
 {
   public:
-    // 点在多边形内
+    // Point in polygon
     bool PointInPolygon(MyPoint* P, vector<MyPoint> V);
-    // 线与多边形相交
+    // Line intersects with polygon
     bool LineInsectArea(MyPoint* P0, MyPoint* P1, vector<MyPoint> V);
 
     bool LineInsectEnvelope(MyPoint* StartMyPoint, MyPoint* EndMyPoint, double Xmax, double Xmin, double Ymax, double Ymin);
 
-    // 多边形与多边形相交
+    // Polygon intersects with polygon
     bool AreaInsectArea(vector<MyPoint> Area1, vector<MyPoint> Area2);
 
-    // 获取外包矩形的边界点
+    // Get bounding rectangle boundary points
     bool GetEnvelopePoints(vector<MyPoint> Area, double& Xmax, double& Xmin, double& Ymax, double& Ymin);
 
-    // 判断是否过180度经线
+    // Check if crossing 180 degree meridian
     bool IsOver180Degree(vector<MyPoint> Area);
 
   private:

@@ -1,14 +1,15 @@
 #include "Satellite.h"
+#include "Logger.h"
 #include "JulianConvert.h"
 #include <string>
 #include <vector>
 #include <cmath>
 #include <ctime>
+#include <sstream>
+#include <iomanip>
 using namespace std;
 
 const double R = 6378.15;
-// YYYY-MM-DD HH24:MI:SS
-const string BJTimeFormate = "yyyy-MM-dd HH:mm:ss"; // 北京时间的格式
 Satellite::Satellite(string SatId, string SatName)
 {
   m_SatName = SatName;
@@ -29,32 +30,32 @@ double Satellite::TheltaG(DateTime *dt)
 
 void Satellite::GetSensorPointsECI(const Sensor *sen, double r[], double v[], double res[])
 {
-  // 传感器坐标下的Z轴向量
-  // （，，）
-  // 根据传感器的安装参数和当前侧摆角将Z轴坐标转换成卫星本体坐标系
-  // 只考虑侧摆方向的安装角，绕X轴旋转，向右为正
-  // 临时修改，因安装角与计算结果正好相反，故加了个负号
+  // Z-axis vector in sensor coordinate system
+  // (,,)
+  // Convert Z-axis coordinates to satellite body coordinate system based on sensor installation parameters and current side swing angle
+  // Only consider installation angle in side swing direction, rotate around X-axis, positive to the right
+  // Temporary modification: added negative sign because installation angle is opposite to calculation result
   double satz[3] = {0};
   double scale[3] = {0, 0, 1};
   RotateX(scale, -sen->getInitAngle() * M_PI / 180, satz);
   // double[] satz = RotateX(0, 0, 1, 0);
-  // 一些角度
+  // Some angles
   double SenCurAngle = sen->getCurSideAngle() * M_PI / 180;
-  // 粗略计算载荷的观测角
+  // Roughly calculate the sensor's observation angle
   double ObsAngle = sen->getObsAngle() > 0 ? sen->getObsAngle() : atan(sen->getWidth() / (GetSatHeight() * 2));
   double SenHalfAngle = (ObsAngle / 2) * M_PI / 180;
   // SenHalfAngle = 10 * Math.PI / 180;
   // SenCurAngle = 20 * Math.PI / 180;
 
-  // 根据卫星的姿态将卫星本体坐标系转换成轨道坐标系
-  // 暂时只考虑侧摆，绕X轴旋转，向右侧摆为负
-  // 载荷Z轴的旋转,向右为负
+  // Convert satellite body coordinate system to orbital coordinate system based on satellite attitude
+  // Currently only consider side swing, rotate around X-axis, negative when swinging to the right
+  // Rotation of sensor Z-axis, negative to the right
   double satsidez[3] = {0};
   scale[0] = satz[0];
   scale[1] = satz[1];
   scale[2] = satz[2];
   RotateX(scale, -SenCurAngle, satsidez);
-  // 将载荷的Z轴向左右旋转，得出观测的左右侧向量
+  // Rotate the sensor's Z-axis left and right to obtain left and right observation vectors
   double sl[3] = {0};
   scale[0] = satsidez[0];
   scale[1] = satsidez[1];
@@ -65,24 +66,24 @@ void Satellite::GetSensorPointsECI(const Sensor *sen, double r[], double v[], do
   double sr[3] = {0};
   RotateX(scale, -SenHalfAngle, sr);
 
-  // 根据卫星的位置和速度将轨道坐标系转换成ECI
-  // 计算转换矩阵Reo
+  // Convert orbital coordinate system to ECI based on satellite position and velocity
+  // Calculate transformation matrix Reo
   double Reo[3][3] = {0};
   ComputeReo(r, v, Reo);
 
-  // 用Reo将sl[]和sr[]转换至ECI
+  // Use Reo to convert sl[] and sr[] to ECI
   double sleci[3] = {0};
   double sreci[3] = {0};
   MulMatrix3p1(Reo, sl, sleci);
   MulMatrix3p1(Reo, sr, sreci);
 
-  // 观测向量与地球求交
+  // Intersect observation vectors with Earth
   double pleci[3] = {0};
   IntersectSolution(sleci, r, pleci);
   double preci[3] = {0};
   IntersectSolution(sreci, r, preci);
 
-  // 设定返回值
+  // Set return values
   res[0] = pleci[0];
   res[1] = pleci[1];
   res[2] = pleci[2];
@@ -93,13 +94,13 @@ void Satellite::GetSensorPointsECI(const Sensor *sen, double r[], double v[], do
 
 void Satellite::IntersectSolution(double v[], double r[], double res[])
 {
-  // 圆的方程
+  // Sphere equation
   // x^2+y^2+z^2=1
-  // 直线方程
+  // Line equation
   // x-rx   y-ry   z-rz
   //---- = ---- = ---- = k
   //  vx     vy     vz
-  // 联立之后得如下方程：
+  // Combining these equations gives:
   //(vx^2+vy^2+vz^2)k^2 + 2(vx*rx+vy*ry+vz*rz)k + (rx^2+r^2+rz^2-1)=0
   // A=(vx^2+vy^2+vz^2); B=2(vx*rx+vy*ry+vz*rz); C=(rx^2+r^2+rz^2-1)
   double A = v[0] * v[0] + v[1] * v[1] + v[2] * v[2], B = 2 * (v[0] * r[0] + v[1] * r[1] + v[2] * r[2]),
@@ -107,10 +108,10 @@ void Satellite::IntersectSolution(double v[], double r[], double res[])
   double k, delta = B * B - 4 * A * C;
   if (delta < 0)
   {
-    cout << "error solving equation" << endl;
+    log_message(LOG_ERROR, "Error solving equation: delta < 0");
     return;
   }
-  // 由于要求出球面上距(rx,ry,rz)点较近的点，因此如果B>0，则解取+号，否则取-号
+  // To find the point on the sphere closer to (rx,ry,rz), use + if B>0, otherwise use -
   if (B > 0)
   {
     k = (-B + sqrt(delta)) / (2 * A);
@@ -127,22 +128,21 @@ void Satellite::IntersectSolution(double v[], double r[], double res[])
 
 void Satellite::GetSensorPointsBLH(const Sensor *sen, DateTime dt, double r[], double v[], double res[])
 {
-  // 计算载荷观测范围的ECI坐标
+  // Calculate ECI coordinates of sensor observation range
   double seneci[6] = {0};
   GetSensorPointsECI(sen, r, v, seneci);
 
-  // 分离出左右侧点
+  // Separate left and right points
   double pleci[3] = {seneci[0], seneci[1], seneci[2]};
   double preci[3] = {seneci[3], seneci[4], seneci[5]};
-  // 根据时间将ECI转换成ECR
+  // Convert ECI to ECR based on time
   double thetaG = TheltaG(&dt);
-  // cout<<"thetaG: "<<thetaG<<endl;
   double plecr[3] = {0};
   double precr[3] = {0};
   RotateZ(pleci, -thetaG, plecr);
   RotateZ(preci, -thetaG, precr);
 
-  // ECR转换成BLH
+  // Convert ECR to BLH
   double left[2] = {0};
   ECRtoBL(plecr, left);
   double right[2] = {0};
@@ -152,7 +152,6 @@ void Satellite::GetSensorPointsBLH(const Sensor *sen, DateTime dt, double r[], d
   res[1] = left[1];
   res[2] = right[0];
   res[3] = right[1];
-  // cout << "left: " << left[0] << " " << left[1] << " right: " << right[0] << " " << right[1] << endl;
 }
 
 void Satellite::MulMatrix3p1(double mx[][3], double my[], double res[])
@@ -186,11 +185,11 @@ void Satellite::RotateZ(double coord[], double AngleRad, double res[])
 
 void Satellite::ECRtoBL(double ecr[], double res[])
 {
-  // ECR转换成BLH
+  // Convert ECR to BLH
   double lon_left = atan(ecr[1] / ecr[0]) * 180 / M_PI;
   double lat_left = atan(ecr[2] / (sqrt(ecr[0] * ecr[0] + ecr[1] * ecr[1]))) * 180 / M_PI;
 
-  // 经度范围在-180~180之间，而atan的值域为-90~90，因此需要对经度进行调整
+  // Longitude range is -180~180, while atan range is -90~90, so longitude needs to be adjusted
   if (ecr[0] < 0)
   {
     lon_left = ecr[1] < 0 ? lon_left - 180 : lon_left + 180;
@@ -247,13 +246,13 @@ double Satellite::MOD3p3(double m[][3])
 
 void Satellite::ComputeReo(double r[], double v[], double res[][3])
 {
-  // 单位化
+  // Normalize
   double modr = sqrt(r[0] * r[0] + r[1] * r[1] + r[2] * r[2]);
   double modv = sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
   double nr[3] = {r[0] / modr, r[1] / modr, r[2] / modr};
   double nv[3] = {v[0] / modv, v[1] / modv, v[2] / modv};
 
-  // 求H
+  // Calculate H
   double h[3] = {0};
   CrossProduct(nr, nv, h);
 
@@ -264,7 +263,7 @@ void Satellite::ComputeReo(double r[], double v[], double res[][3])
   double Roe[3][3] = {{Roe0[0], Roe0[1], Roe0[2]},
                       {-h[0], -h[1], -h[2]},
                       {-nr[0], -nr[1], -nr[2]}};
-  // 求逆
+  // Calculate inverse
   MatrixReverse(Roe, res);
 }
 
@@ -275,7 +274,7 @@ void Satellite::MatrixReverse(double m[][3], double res[][3])
 
   if (mod == 0)
   {
-    cout << "error computing mod!" << endl;
+    log_message(LOG_ERROR, "Error computing matrix determinant: mod = 0");
     return;
   }
 
@@ -293,53 +292,54 @@ vector<TrackPoint> Satellite::ComputeTrack(DateTime StartTime, DateTime EndTime,
 {
   double R = 6378.15;
 
-  // 预定义vector大小，避免重分配
+  // Predefine vector size to avoid reallocation
   int size = 1 + (EndTime.ToTimestamp() - StartTime.ToTimestamp()) / (StepTimeInSec);
   vector<TrackPoint> TpList;
-  TpList.reserve(size); // 提前分配空间
+  TpList.reserve(size); // Allocate space in advance
 
-  // 开始计算,准备TLE数据
+  // Start calculation, prepare TLE data
   if (m_line1.empty())
   {
-    m_LastError = "TLE数据读取出错！";
+    m_LastError = "TLE data read error!";
+    log_message(LOG_ERROR, "TLE data read error - line1 is empty");
     return TpList;
   }
 
   cTle sattle(m_line0, m_line1, m_line2);
   cOrbit satorbit(sattle);
 
-  // 准备计算时刻
+  // Prepare calculation time
   DateTime tmpTime = StartTime;
 
-  // 缓存轨道指数计算结果
+  // Cache orbital epoch calculation result
   double epoch_date = satorbit.Epoch().Date();
 
-  // 预分配变量
+  // Preallocate variables
   double lat, lon, alt, mins;
 
   for (int i = 0; i < size; i++)
   {
-    // 换算成绝对时间
+    // Convert to absolute time
     cJulian jul(tmpTime.ToTime_t());
-    // 计算时间差
+    // Calculate time difference
     mins = (jul.Date() - epoch_date) * 1440;
-    // 计算得出xyz坐标
+    // Calculate xyz coordinates
     cEciTime eci = satorbit.PositionEci(mins);
 
-    // 换成经纬度
+    // Convert to latitude and longitude
     cGeoTime geo(eci);
-    // 把经度坐标换成-180到180之间
+    // Convert longitude to range -180 to 180
     lon = geo.LongitudeDeg();
     lon = lon > 180 ? lon - 360 : lon;
     lat = geo.LatitudeDeg();
     alt = geo.AltitudeKm();
 
-    // 构造TrackPoint并直接添加到向量，避免复制
+    // Construct TrackPoint and add directly to vector to avoid copying
     TpList.emplace_back(tmpTime, lon, lat, alt,
                         eci.Position().m_x / R, eci.Position().m_y / R, eci.Position().m_z / R,
                         eci.Velocity().m_x / R, eci.Velocity().m_y / R, eci.Velocity().m_z / R);
 
-    // tmpTime加上下一时长
+    // Add next time interval to tmpTime
     tmpTime = tmpTime.AddSeconds(StepTimeInSec);
   }
   return TpList;
@@ -348,49 +348,51 @@ vector<TrackPoint> Satellite::ComputeTrack(DateTime StartTime, DateTime EndTime,
 vector<CRegion> Satellite::SensorInRegionWithStep(vector<CRegion> InputRegions, int StepTimeInSec,
                                                   TargetArea *area)
 {
-  // 开始计时
+  // Start timing
   clock_t step_start_time = clock();
 
-  // 预分配空间，假设输出至少与输入一样多
+  // Preallocate space, assuming output is at least as large as input
   vector<CRegion> regionList;
   regionList.reserve(InputRegions.size());
 
   RelationOperator rop;
 
-  // 缓存目标区域几何形状以避免重复访问
+  // Cache target area geometry to avoid repeated access
   const vector<MyPoint> &areaGeometry = area->getGeometry();
 
-  // 缓存一个通用的区域点集合，减少内存分配
+  // Cache a common region point set to reduce memory allocation
   vector<MyPoint> regionPoints;
-  regionPoints.reserve(5); // 我们知道每个区域有5个点
+  regionPoints.reserve(5); // We know each region has 5 points
 
   for (int i = 0; i < InputRegions.size(); i++)
   {
-    const CRegion &inputRegion = InputRegions[i]; // 使用引用避免复制
-    // 直接使用嵌入在区域中的传感器，不再需要 GetSensorByName
+    const CRegion &inputRegion = InputRegions[i]; // Use reference to avoid copying
+    // Directly use sensor embedded in region, no longer need GetSensorByName
     const Sensor &sen = inputRegion.getSensor();
 
-    // 检查传感器是否有效
+    // Check if sensor is valid
     if (sen.getSenName().empty())
     {
-      cout << "Sensor not found or invalid: " << inputRegion.getSenName() << endl;
+      stringstream ss;
+      ss << "Sensor not found or invalid: " << inputRegion.getSenName();
+      log_message(LOG_WARN, ss.str());
       continue;
     }
 
     CRegion region;
-    region.setSensor(sen); // 设置传感器
+    region.setSensor(sen); // Set sensor
 
     DateTime startTime = inputRegion.getStartTime();
     DateTime stopTime = inputRegion.getStopTime();
 
-    // 提前计算轨道点以便重用，避免多次计算
+    // Calculate track points in advance for reuse, avoid multiple calculations
     vector<TrackPoint> TrackPoints = ComputeTrack(startTime, stopTime, StepTimeInSec);
 
     DateTime lastStopTime = stopTime.AddSeconds(-StepTimeInSec);
     DateTime curTime = startTime;
     int index = 0;
 
-    // 预分配结果数组以减少重分配
+    // Preallocate result arrays to reduce reallocation
     double res1[4] = {0};
     double res2[4] = {0};
 
@@ -398,7 +400,7 @@ vector<CRegion> Satellite::SensorInRegionWithStep(vector<CRegion> InputRegions, 
     {
       if (index + 1 >= TrackPoints.size())
       {
-        cout << "index out of range" << endl;
+        log_message(LOG_ERROR, "Index out of range in track points");
         break;
       }
 
@@ -413,9 +415,9 @@ vector<CRegion> Satellite::SensorInRegionWithStep(vector<CRegion> InputRegions, 
       GetSensorPointsBLH(&sen, curTime, r1, v1, res1);
       GetSensorPointsBLH(&sen, curTime.AddSeconds(StepTimeInSec), r2, v2, res2);
 
-      // 重用regionPoints，避免每次循环创建新对象
+      // Reuse regionPoints to avoid creating new objects each loop iteration
       regionPoints.clear();
-      // 先右后左, 逆时针
+      // Right first then left, counterclockwise
       regionPoints.push_back(MyPoint(res1[2], res1[3], 0));
       regionPoints.push_back(MyPoint(res2[2], res2[3], 0));
       regionPoints.push_back(MyPoint(res2[0], res2[1], 0));
@@ -428,7 +430,7 @@ vector<CRegion> Satellite::SensorInRegionWithStep(vector<CRegion> InputRegions, 
         {
           region.setStartTime(new DateTime(curTime));
           region.setStopTime(new DateTime(curTime.AddSeconds(StepTimeInSec)));
-          region.setpGeometry(regionPoints); // 这会复制regionPoints
+          region.setpGeometry(regionPoints); // This will copy regionPoints
         }
         else if (region.getStopTime().ToTimestamp() == curTime.ToTimestamp())
         {
@@ -438,12 +440,12 @@ vector<CRegion> Satellite::SensorInRegionWithStep(vector<CRegion> InputRegions, 
         }
         else
         {
-          // 区域结束，添加到列表
+          // Region ends, add to list
           regionList.push_back(region);
           // create new region
           region = CRegion();
-          region.setSensor(sen); // 设置传感器
-          // 设置新的开始和结束时间
+          region.setSensor(sen); // Set sensor
+          // Set new start and end time
           region.setStartTime(new DateTime(curTime));
           region.setStopTime(new DateTime(curTime.AddSeconds(StepTimeInSec)));
           region.setpGeometry(regionPoints);
@@ -451,11 +453,11 @@ vector<CRegion> Satellite::SensorInRegionWithStep(vector<CRegion> InputRegions, 
       }
       else if (region.getpGeometry().size() > 0)
       {
-        // 添加最后一个区域
+        // Add last region
         regionList.push_back(region);
         // create new region
         region = CRegion();
-        region.setSensor(sen); // 设置传感器
+        region.setSensor(sen); // Set sensor
       }
 
       curTime = curTime.AddSeconds(StepTimeInSec);
@@ -469,36 +471,48 @@ vector<CRegion> Satellite::SensorInRegionWithStep(vector<CRegion> InputRegions, 
     }
   }
 
-  // 压缩vector容量到实际大小
+  // Compress vector capacity to actual size
   vector<CRegion>(regionList).swap(regionList);
 
-  // 结束计时
+  // End timing
   clock_t step_end_time = clock();
   double step_elapsed_time = (double)(step_end_time - step_start_time) / CLOCKS_PER_SEC;
-  cout << "步长 " << StepTimeInSec << " 区域计算完成，处理了 " << InputRegions.size()
-       << " 个输入区域，生成了 " << regionList.size() << " 个输出区域，用时: "
-       << step_elapsed_time << " 秒" << endl;
+  
+  stringstream ss;
+  ss << fixed << setprecision(3)
+     << "Step " << StepTimeInSec << "s calculation completed. "
+     << "Processed " << InputRegions.size() << " input regions, "
+     << "generated " << regionList.size() << " output regions. "
+     << "Time elapsed: " << step_elapsed_time << "s";
+  log_message(LOG_INFO, ss.str());
 
   return regionList;
 }
 
 vector<CRegion> Satellite::SensorInRegion(vector<Sensor> *SenList, long StartTime, long EndTime, TargetArea *area)
 {
-  // 开始计时
+  // Start timing
   clock_t start_time = clock();
 
-  // 预先分配空间以减少重新分配
+  // Pre-allocate space to reduce reallocation
   vector<CRegion> regionList;
   regionList.reserve(SenList->size());
-  cout << "开始计算卫星规划路径..." << endl;
+  
+  log_message(LOG_INFO, "Starting satellite path planning calculation...");
 
-  cout << "开始时间: " << StartTime << " 结束时间: " << EndTime << endl;
+  stringstream ss;
+  ss << "Start time: " << StartTime << ", End time: " << EndTime;
+  log_message(LOG_INFO, ss.str());
+  
   for (const Sensor &sensor : *SenList)
   {
-    cout << "传感器: " << sensor.getSenName() << " 安装角: " << sensor.getInitAngle()
-         << " 观测角: " << sensor.getObsAngle() << endl;
+    stringstream sensorInfo;
+    sensorInfo << "Sensor: " << sensor.getSenName() 
+               << ", Installation angle: " << sensor.getInitAngle()
+               << sensor.getObsAngle();
+    log_message(LOG_INFO, sensorInfo.str());
   }
-  // 创建一次DateTime对象并复用
+  // Create DateTime objects once and reuse
   DateTime *startDateTime = new DateTime(StartTime);
   DateTime *endDateTime = new DateTime(EndTime);
 
@@ -507,9 +521,9 @@ vector<CRegion> Satellite::SensorInRegion(vector<Sensor> *SenList, long StartTim
   {
     const Sensor &sensor = SenList->at(i);
     CRegion region;
-    region.setSensor(sensor);           // 设置传感器对象
-    region.setStartTime(startDateTime); // 使用共享的DateTime对象
-    region.setStopTime(endDateTime);    // 使用共享的DateTime对象
+    region.setSensor(sensor);           // Set sensor object
+    region.setStartTime(startDateTime); // Use shared DateTime object
+    region.setStopTime(endDateTime);    // Use shared DateTime object
     regionList.push_back(region);
   }
 
@@ -517,31 +531,43 @@ vector<CRegion> Satellite::SensorInRegion(vector<Sensor> *SenList, long StartTim
   for (int i = 0; i < 3; i++)
   {
     clock_t step_start = clock();
-    cout << "步长 " << steps[i] << " 开始计算..." << endl;
+    
+    stringstream stepStart;
+    stepStart << "Starting calculation with step " << steps[i] << "s...";
+    log_message(LOG_INFO, stepStart.str());
 
-    // 传递引用可能会减少内存使用，但需要确保SensorInRegionWithStep函数不会修改原始regionList
-    // 这里保持原样，因为函数设计可能假设值传递
+    // Passing reference might reduce memory usage, but ensure SensorInRegionWithStep doesn't modify original regionList
+    // Keep as is, since function design may assume value passing
     regionList = SensorInRegionWithStep(regionList, steps[i], area);
 
-    // 内存管理：如果regionList很大，可能需要压缩容量
+    // Memory management: if regionList is large, may need to compress capacity
     if (i < 2)
-    {                                               // 最后一次迭代不需要
-      vector<CRegion>(regionList).swap(regionList); // 压缩capacity到size
+    {                                               // Last iteration doesn't need this
+      vector<CRegion>(regionList).swap(regionList); // Compress capacity to size
     }
 
     clock_t step_end = clock();
     double step_time = (double)(step_end - step_start) / CLOCKS_PER_SEC;
-    cout << "步长 " << steps[i] << " 计算完成，结果区域数量: " << regionList.size()
-         << "，用时: " << step_time << " 秒" << endl;
+    
+    stringstream stepEnd;
+    stepEnd << fixed << setprecision(3)
+            << "Step " << steps[i] << "s completed. "
+            << "Result regions: " << regionList.size() 
+            << ", Time elapsed: " << step_time << "s";
+    log_message(LOG_INFO, stepEnd.str());
   }
 
-  // 结束计时
+  // End timing
   clock_t end_time = clock();
   double total_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
-  cout << "卫星路径规划完成，总用时: " << total_time << " 秒" << endl;
+  
+  stringstream summary;
+  summary << fixed << setprecision(3)
+          << "Satellite path planning completed. Total time: " << total_time << "s";
+  log_message(LOG_INFO, summary.str());
 
-  // 注意：这里没有释放startDateTime和endDateTime，因为它们可能被CRegion对象使用
-  // 如果CRegion内部会复制DateTime对象，则应该在这里释放
+  // Note: Not releasing startDateTime and endDateTime here, as they may be used by CRegion objects
+  // If CRegion internally copies DateTime objects, they should be released here
   // delete startDateTime;
   // delete endDateTime;
 

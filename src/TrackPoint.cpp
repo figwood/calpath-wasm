@@ -23,7 +23,6 @@ double eci_x, double eci_y, double eci_z, double vx, double vy, double vz)
     m_BlhPoint = MyPoint(lon, lat, alt);
     m_EciPoint = MyPoint(eci_x, eci_y, eci_z);
     m_Vel = MyPoint(vx, vy, vz);
-    //cout <<"input: "<<eci_x <<","<<eci_y<<","<<eci_z<<","<<vx<<","<<vy<<","<<vz<<endl;
 }
 TrackPoint::~TrackPoint()
 {

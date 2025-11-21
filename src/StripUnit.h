@@ -9,9 +9,9 @@ using namespace std;
 class StripUnit
 {
   private:
-    //星下点轨迹的两个点
+    // Two points of sub-satellite point trajectory
     MyPoint *m_FirstPoint, *m_LastPoint;
-    //扫描带，顺时针排列
+    // Scanning strip, arranged clockwise
     vector<MyPoint> m_StripPoints;
     DateTime *m_StartTime;
     DateTime *m_StopTime;

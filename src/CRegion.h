@@ -12,7 +12,7 @@ class CRegion
   private:
     DateTime *m_StartTime, *m_StopTime;
     vector<MyPoint> m_pGeometry;
-    Sensor m_Sensor; // 添加 Sensor 成员
+    Sensor m_Sensor; // Add Sensor member
     void Init();
 
   public:

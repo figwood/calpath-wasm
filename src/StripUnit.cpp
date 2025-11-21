@@ -3,7 +3,7 @@ StripUnit::StripUnit()
 {
     m_FirstPoint = new MyPoint(0, 0);
     m_LastPoint = new MyPoint(0, 0);
-    //扫描带，顺时针排列
+    // Scanning strip, arranged clockwise
     m_StripPoints = vector<MyPoint>(0);
     m_StartTime = new DateTime(1900, 1, 1);
     m_StopTime = new DateTime(1900, 1, 1);

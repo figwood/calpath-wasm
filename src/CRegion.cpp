@@ -16,7 +16,7 @@ void CRegion::Init()
     m_StartTime = &DateTime::Today();
     m_StopTime = &DateTime::Today();
     m_pGeometry = vector<MyPoint>(0);
-    // 使用默认构造函数初始化 Sensor
+    // Initialize Sensor using default constructor
     m_Sensor = Sensor("", "");
 }
 

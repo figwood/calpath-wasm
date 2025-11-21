@@ -113,16 +113,6 @@ string DateTime::toString()
 DateTime DateTime::ToUniversalTime()
 {
     // convert to timestamp
-    /*
-    tm t;
-    t.tm_year = m_year - 1900;
-    t.tm_mon = m_month - 1;
-    t.tm_mday = m_day;
-    t.tm_hour = m_hour;
-    t.tm_min = m_min;
-    t.tm_sec = m_sec;
-    t.tm_isdst = 0;
-    */
     tm t = ToTm();
 
     // substract hours*timezone

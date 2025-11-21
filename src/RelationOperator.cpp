@@ -2,7 +2,7 @@
 #include <cmath>
 #include <tuple>
 using namespace std;
-// 点在多边形内
+// Point in polygon
 bool RelationOperator::PointInPolygon(MyPoint *P, vector<MyPoint> V)
 {
     int cn = 0, n = V.size() - 1; // the  crossing number counter
@@ -21,7 +21,7 @@ bool RelationOperator::PointInPolygon(MyPoint *P, vector<MyPoint> V)
     }
     return (cn & 1) == 1; // 0 if even (out), and 1 if  odd (in)
 }
-// 线与多边形相交
+// Line intersects with polygon
 bool RelationOperator::LineInsectArea(MyPoint *P0, MyPoint *P1, vector<MyPoint> V)
 {
     int n = V.size() - 1;
@@ -85,10 +85,10 @@ bool RelationOperator::LineInsectEnvelope(MyPoint *StartPoint, MyPoint *EndPoint
     endX = EndPoint->getX();
     endY = EndPoint->getY();
 
-    // 判断是否过180度经线
+    // Check if crossing 180 degree meridian
     if (abs(startX - endX) > 180)
     {
-        // 与-180度经线和180度经线的交点
+        // Intersection points with -180 and 180 degree meridians
         MyPoint *leftp;
         MyPoint *rightp;
         tuple<MyPoint *, MyPoint *> tuplePoints = GetEdgePoints(StartPoint, EndPoint);
@@ -154,14 +154,14 @@ bool RelationOperator::IsOver180Degree(vector<MyPoint> Area)
     double Xmax, Xmin, Ymax, Ymin;
     if (!GetEnvelopePoints(Area, Xmax, Xmin, Ymax, Ymin))
     {
-        return false; // 无效区域
+        return false; // Invalid area
     }
-    // 检查经度范围是否超过180度
+    // Check if longitude range exceeds 180 degrees
     if (Xmax - Xmin > 180)
     {
-        return true; // 过180度经线
+        return true; // Crosses 180 degree meridian
     }
-    return false; // 未过180度经线
+    return false; // Does not cross 180 degree meridian
 }
 
 void RelationOperator::AdjustPointX(vector<MyPoint> *Area)
@@ -172,7 +172,7 @@ void RelationOperator::AdjustPointX(vector<MyPoint> *Area)
     }
     if (IsOver180Degree(*Area))
     {
-        // 把x坐标转换到0~360之间
+        // Convert x coordinate to 0~360 range
         for (auto &point : *Area)
         {
             if (point.getX() < 0)
@@ -183,29 +183,29 @@ void RelationOperator::AdjustPointX(vector<MyPoint> *Area)
     }
 }
 
-// 多边形与多边形相交
+// Polygon intersects with polygon
 bool RelationOperator::AreaInsectArea(vector<MyPoint> Area1, vector<MyPoint> Area2)
 {
     if (Area1.empty() || Area1.size() < 3 || Area2.empty() || Area2.size() < 3)
     {
         return false;
     }
-    // 判断是否过180度经线
+    // Check if crossing 180 degree meridian
     AdjustPointX(&Area1);
     AdjustPointX(&Area2);
-    // 判断边线是否相交
+    // Check if edges intersect
     bool Intersected = false;
     for (int i = 0; i < Area1.size() - 1; i++)
     {
         Intersected = LineInsectArea(&Area1[i], &Area1[i + 1], Area2);
         if (Intersected)
         {
-            // 边线相交，返回true
+            // Edges intersect, return true
             return true;
         }
     }
 
-    // 如果边线不相交，判断顶点
+    // If edges don't intersect, check vertices
     return PointInPolygon(&Area1[0], Area2) ||
            PointInPolygon(&Area2[0], Area1);
 }
@@ -216,14 +216,14 @@ tuple<MyPoint *, MyPoint *> RelationOperator::GetEdgePoints(MyPoint *p1, MyPoint
     MyPoint *rgtp;
     if (p1->getX() - p2->getX() < -180)
     {
-        // 过-180度经线
+        // Crosses -180 degree meridian
         double k = atan((p2->getY() - p1->getY()) / (p2->getX() - p1->getX() - 360));
         lftp = new MyPoint(-180, p1->getY() - k * (p1->getX() + 180));
         rgtp = new MyPoint(180, lftp->getY());
     }
     else if (p1->getX() - p2->getX() > 180)
     {
-        // 过180度经线
+        // Crosses 180 degree meridian
         double k = atan((p2->getY() - p1->getY()) / (p2->getX() - p1->getX() + 360));
 
         lftp = new MyPoint(-180, p1->getY() - k * (p1->getX() - 180));

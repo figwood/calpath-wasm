@@ -1,15 +1,15 @@
-## 项目结构
+## Project Structure
 
-- `src/`: C++源代码
-  - `calculator.cpp`: 主要计算逻辑和Emscripten绑定
-  - `Satellite.h/cpp`: 卫星轨道计算
-  - `Sensor.h/cpp`: 传感器模型
-  - `CRegion.h/cpp`: 区域计算
-  - `orbitTools/`: 轨道计算库
-- `index.html`: Web前端界面
-- `CMakeLists.txt`: 构建配置文件
+- `src/`: C++ source code
+  - `calculator.cpp`: Main calculation logic and Emscripten bindings
+  - `Satellite.h/cpp`: Satellite orbit calculation
+  - `Sensor.h/cpp`: Sensor model
+  - `CRegion.h/cpp`: Region calculation
+  - `orbitTools/`: Orbit calculation library
+- `index.html`: Web frontend interface
+- `CMakeLists.txt`: Build configuration file
 
-## 技术栈
+## Tech Stack
 
 - C++14
 - Emscripten

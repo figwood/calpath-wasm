@@ -25,7 +25,7 @@ protected:
   string m_SatName;
 
   Color m_DisplayColor;
-  int m_StepInSec; //正常步长,20s
+  int m_StepInSec; // Normal step length, 20s
 
   RelationOperator m_RelOpera;
 

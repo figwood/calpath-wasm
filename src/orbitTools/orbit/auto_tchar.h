@@ -1,4 +1,4 @@
-// 修正BCB6的tchar.h只有_TCHAR却没有TCHAR的问题.
+// Fix BCB6's tchar.h which only has _TCHAR but not TCHAR.
 #if defined(__BORLANDC__) && !defined(_TCHAR_DEFINED)
     typedef _TCHAR    TCHAR, *PTCHAR;
     typedef _TCHAR    TBYTE, *PTBYTE;
