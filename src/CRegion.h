@@ -25,9 +25,12 @@ class CRegion
     string getSatName() const { return m_Sensor.getSatName(); }
     string getSenName() const { return m_Sensor.getSenName(); }
     DateTime getStartTime() const { return *m_StartTime; }
+    long getStartTimestamp() const { return m_StartTime->ToTimestamp(); }
     void setStartTime(DateTime *c) { m_StartTime = c; }
 
     DateTime getStopTime() const { return *m_StopTime; }
+    long getStopTimestamp() const { return m_StopTime->ToTimestamp(); }
+
     void setStopTime(DateTime *c) { m_StopTime = c; }
 
     double getWidth() const { return m_Sensor.getWidth(); }

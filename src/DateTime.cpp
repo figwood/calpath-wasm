@@ -139,8 +139,8 @@ long DateTime::ToTimestamp()
 {
     tm Tm = ToTm();
     time_t t = mktime(&Tm);
-    long now = static_cast<long int>(t);
-    return now;
+    long stamp = static_cast<long int>(t);
+    return stamp;
 }
 
 tm DateTime::ToTm()
