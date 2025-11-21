@@ -13,12 +13,18 @@ using namespace Zeptomoby::OrbitTools;
 class Calculator
 {
 public:
+    // Compute satellite track points over a time range
+    // Parameters: StartTime, EndTime are Unix timestamps in UTC
+    // Returns: Vector of TrackPoint objects with timestamps in UTC
     vector<TrackPoint> ComputeTrack(string SatID, string SatName, string line1, string line2,
         long StartTime, long EndTime,int StepTimeInSec){
         Satellite sat(SatID, SatName);
         sat.SetCurTLE("", line1, line2);
         return sat.ComputeTrack(StartTime, EndTime,StepTimeInSec);
     }
+    // Calculate sensor coverage regions within a target area and time range
+    // Parameters: StartTime, EndTime are Unix timestamps in UTC
+    // Returns: Vector of CRegion objects with start/end timestamps in UTC
     vector<CRegion> SensorInRegion(string SatID, string SatName, string line1, string line2,
         vector<Sensor> SenList, long StartTime, long EndTime, TargetArea area)
     {
@@ -27,6 +33,8 @@ public:
         return sat.SensorInRegion(&SenList, StartTime, EndTime, &area);
     } 
 
+    // Calculate current satellite position and velocity from TLE
+    // Returns: TrackPoint with current time in UTC and position/velocity data
     TrackPoint calPath(string line1, string line2)
     {
         string line0="";
@@ -34,11 +42,11 @@ public:
         cOrbit satorbit(sattle);
         double lat, lon, alt, mins;
 
-        // Convert to absolute time
+        // Convert to absolute time (UTC)
         time_t ttNow = time(0);
         cJulian jul(ttNow);
         
-        // Create DateTime object using current time
+        // Create DateTime object using current time in UTC
         tm* timeinfo = gmtime(&ttNow);
         DateTime curTime(timeinfo->tm_year + 1900, 
                        timeinfo->tm_mon + 1,

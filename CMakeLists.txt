@@ -84,6 +84,6 @@ add_executable(satpath ${SOURCES} ${HEADERS})
 set(CMAKE_EXECUTABLE_SUFFIX ".js")
 
 # Configure Emscripten flags
-set(EMSCRIPTEN_LINK_FLAGS "-s WASM=1 -s EXPORT_NAME='createModule' -s MODULARIZE=1 -s ENVIRONMENT='web,worker' -s NO_EXIT_RUNTIME=1 -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap'] -s ALLOW_MEMORY_GROWTH=1 --bind -O3")
+set(EMSCRIPTEN_LINK_FLAGS "-s WASM=1 -s EXPORT_NAME='createModule' -s MODULARIZE=1 -s ENVIRONMENT='web,worker' -s NO_EXIT_RUNTIME=1 -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap'] -s ALLOW_MEMORY_GROWTH=1 -s ASSERTIONS=1 --bind -O0")
 string(REPLACE ";" " " EMSCRIPTEN_LINK_FLAGS_STR "${EMSCRIPTEN_LINK_FLAGS}")
 set_target_properties(satpath PROPERTIES LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS_STR}")

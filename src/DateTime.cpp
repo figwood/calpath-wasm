@@ -2,6 +2,33 @@
 #include <ctime>
 
 using namespace std;
+
+// Portable implementation of timegm for converting UTC tm to time_t
+// timegm is not available on all platforms (e.g., WASM/Emscripten)
+static time_t portable_timegm(struct tm *tm) {
+    time_t ret;
+    char *tz;
+    
+    // Save current timezone
+    tz = getenv("TZ");
+    
+    // Set timezone to UTC
+    setenv("TZ", "", 1);
+    tzset();
+    
+    // Convert using mktime (which now interprets as UTC)
+    ret = mktime(tm);
+    
+    // Restore original timezone
+    if (tz) {
+        setenv("TZ", tz, 1);
+    } else {
+        unsetenv("TZ");
+    }
+    tzset();
+    
+    return ret;
+}
 DateTime::DateTime()
 {
     Init(1970, 1, 1, 0, 0, 0, 0);
@@ -9,7 +36,7 @@ DateTime::DateTime()
 DateTime::DateTime(long timestamp)
 {
     time_t t = static_cast<time_t>(timestamp);
-    tm *ptm = localtime(&t);
+    tm *ptm = gmtime(&t);  // Use gmtime for UTC
     m_year = ptm->tm_year + 1900;
     m_month = ptm->tm_mon + 1;
     m_day = ptm->tm_mday;
@@ -117,8 +144,8 @@ DateTime DateTime::ToUniversalTime()
 
     // substract hours*timezone
     t.tm_hour -= m_timezone;
-    time_t time_t_after = mktime(&t);
-    tm tm_after = *localtime(&time_t_after);
+    time_t time_t_after = portable_timegm(&t);  // Use portable_timegm for UTC
+    tm tm_after = *gmtime(&time_t_after);  // Use gmtime for UTC
 
     DateTime dt(tm_after.tm_year + 1900, tm_after.tm_mon + 1,
                 tm_after.tm_mday, tm_after.tm_hour, tm_after.tm_min, tm_after.tm_sec, m_millisec);
@@ -128,7 +155,7 @@ DateTime DateTime::ToUniversalTime()
 long DateTime::ToTimestamp()
 {
     tm Tm = ToTm();
-    time_t t = mktime(&Tm);
+    time_t t = portable_timegm(&Tm);  // Use portable_timegm for UTC
     long stamp = static_cast<long int>(t);
     return stamp;
 }
@@ -153,7 +180,7 @@ bool DateTime::operator<=(DateTime &dt)
 time_t DateTime::ToTime_t()
 {
     tm Tm = ToTm();
-    time_t t = mktime(&Tm);
+    time_t t = portable_timegm(&Tm);  // Use portable_timegm for UTC
     return t;
 }
 
@@ -161,8 +188,8 @@ DateTime DateTime::AddSeconds(int seconds)
 {
     tm t = ToTm();
     t.tm_sec += seconds;
-    time_t time_t_after = mktime(&t);
-    tm tm_after = *localtime(&time_t_after);
+    time_t time_t_after = portable_timegm(&t);  // Use portable_timegm for UTC
+    tm tm_after = *gmtime(&time_t_after);  // Use gmtime for UTC
 
     DateTime dt(tm_after.tm_year + 1900, tm_after.tm_mon + 1,
                 tm_after.tm_mday, tm_after.tm_hour, tm_after.tm_min, tm_after.tm_sec, m_millisec);
