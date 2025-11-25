@@ -4,6 +4,8 @@ on:
   push:
     branches: [ main ]
   pull_request:
+  release:
+    types: [ created ]
 
 jobs:
   build:
@@ -29,3 +31,28 @@ jobs:
         run: |
           test -f build/satpath.js
           test -f build/satpath.wasm
+
+      - name: Create release archive
+        run: |
+          mkdir -p dist
+          cp build/satpath.js build/satpath.wasm dist/
+          ARCHIVE_BASENAME="satpath-${GITHUB_SHA}"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            ARCHIVE_BASENAME="satpath-${{ github.ref_name }}"
+          fi
+          zip -j "dist/${ARCHIVE_BASENAME}.zip" dist/satpath.js dist/satpath.wasm
+          echo "ARCHIVE_NAME=${ARCHIVE_BASENAME}" >> "$GITHUB_ENV"
+          echo "ARCHIVE_PATH=dist/${ARCHIVE_BASENAME}.zip" >> "$GITHUB_ENV"
+
+      - name: Upload archive artifact
+        if: github.event_name != 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARCHIVE_NAME }}
+          path: ${{ env.ARCHIVE_PATH }}
+
+      - name: Attach archive to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.ARCHIVE_PATH }}
