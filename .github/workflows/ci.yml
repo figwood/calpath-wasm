@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Emscripten SDK
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.62
+          actions-cache-key: emsdk-cache-${{ runner.os }}
+
+      - name: Configure CMake project
+        run: emcmake cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build WebAssembly target
+        run: cmake --build build --parallel
+
+      - name: Sanity check build outputs
+        run: |
+          test -f build/satpath.js
+          test -f build/satpath.wasm
