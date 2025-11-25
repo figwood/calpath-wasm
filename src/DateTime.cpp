@@ -1,63 +1,111 @@
 #include "DateTime.h"
+
 #include <ctime>
+#include <iomanip>
+#include <sstream>
 
-using namespace std;
+namespace {
 
-// Portable implementation of timegm for converting UTC tm to time_t
-// timegm is not available on all platforms (e.g., WASM/Emscripten)
-static time_t portable_timegm(struct tm *tm) {
-    time_t ret;
-    char *tz;
-    
-    // Save current timezone
-    tz = getenv("TZ");
-    
-    // Set timezone to UTC
-    setenv("TZ", "", 1);
-    tzset();
-    
-    // Convert using mktime (which now interprets as UTC)
-    ret = mktime(tm);
-    
-    // Restore original timezone
-    if (tz) {
-        setenv("TZ", tz, 1);
-    } else {
-        unsetenv("TZ");
-    }
-    tzset();
-    
-    return ret;
+constexpr long long kSecondsPerMinute = 60;
+constexpr long long kSecondsPerHour = 60 * kSecondsPerMinute;
+constexpr long long kSecondsPerDay = 24 * kSecondsPerHour;
+
+long long days_from_civil(int year, unsigned month, unsigned day)
+{
+    year -= static_cast<int>(month <= 2);
+    const long long era = (year >= 0 ? year : year - 399) / 400;
+    const unsigned yoe = static_cast<unsigned>(year - era * 400);
+    const unsigned doy = (153 * (month > 2 ? month - 3 : month + 9) + 2) / 5 + day - 1;
+    const unsigned doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    return era * 146097 + static_cast<long long>(doe) - 719468;
 }
+
+void civil_from_days(long long days, int &year, unsigned &month, unsigned &day)
+{
+    days += 719468;
+    const long long era = (days >= 0 ? days : days - 146096) / 146097;
+    const unsigned doe = static_cast<unsigned>(days - era * 146097);
+    const unsigned yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    const long long y = static_cast<long long>(yoe) + era * 400;
+    const unsigned doy = doe - (yoe * 365 + yoe / 4 - yoe / 100);
+    const unsigned mp = (5 * doy + 2) / 153;
+    day = doy - (153 * mp + 2) / 5 + 1;
+    month = mp + (mp < 10 ? 3 : -9);
+    year = static_cast<int>(y + (month <= 2));
+}
+
+long long timestamp_from_components(int year, int month, int day, int hour, int minute, int second)
+{
+    const long long days = days_from_civil(year, static_cast<unsigned>(month), static_cast<unsigned>(day));
+    long long result = days * kSecondsPerDay;
+    result += static_cast<long long>(hour) * kSecondsPerHour;
+    result += static_cast<long long>(minute) * kSecondsPerMinute;
+    result += static_cast<long long>(second);
+    return result;
+}
+
+void components_from_timestamp(long long timestamp,
+                               int &year,
+                               int &month,
+                               int &day,
+                               int &hour,
+                               int &minute,
+                               int &second)
+{
+    long long days = timestamp / kSecondsPerDay;
+    long long remainder = timestamp % kSecondsPerDay;
+    if (remainder < 0)
+    {
+        remainder += kSecondsPerDay;
+        --days;
+    }
+
+    unsigned uMonth;
+    unsigned uDay;
+    civil_from_days(days, year, uMonth, uDay);
+    month = static_cast<int>(uMonth);
+    day = static_cast<int>(uDay);
+
+    hour = static_cast<int>(remainder / kSecondsPerHour);
+    remainder %= kSecondsPerHour;
+    minute = static_cast<int>(remainder / kSecondsPerMinute);
+    second = static_cast<int>(remainder % kSecondsPerMinute);
+}
+
+} // namespace
+
 DateTime::DateTime()
 {
     Init(1970, 1, 1, 0, 0, 0, 0);
 }
+
 DateTime::DateTime(long timestamp)
 {
-    time_t t = static_cast<time_t>(timestamp);
-    tm *ptm = gmtime(&t);  // Use gmtime for UTC
-    m_year = ptm->tm_year + 1900;
-    m_month = ptm->tm_mon + 1;
-    m_day = ptm->tm_mday;
-    m_hour = ptm->tm_hour;
-    m_min = ptm->tm_min;
-    m_sec = ptm->tm_sec;
-    m_millisec = 0;
-    m_timezone = 0;
+    int year;
+    int month;
+    int day;
+    int hour;
+    int minute;
+    int second;
+    components_from_timestamp(timestamp, year, month, day, hour, minute, second);
+    Init(year, month, day, hour, minute, second, 0);
 }
+
 DateTime::DateTime(int year, int month, int day)
 {
     Init(year, month, day, 0, 0, 0, 0);
 }
+
 DateTime::DateTime(int year, int month, int day, int hour, int min, int sec)
 {
     Init(year, month, day, hour, min, sec, 0);
 }
+
 DateTime::DateTime(int year, int month, int day, int hour, int min, int sec, int millisec)
 {
     Init(year, month, day, hour, min, sec, millisec);
 }
+
 void DateTime::Init(int year, int month, int day, int hour, int min, int sec, int millisec)
 {
     m_year = year;
@@ -68,101 +116,54 @@ void DateTime::Init(int year, int month, int day, int hour, int min, int sec, in
     m_sec = sec;
     m_millisec = millisec;
 }
-DateTime &DateTime::getNow(bool useLocalTime)
-{
-    time_t ttNow = time(0);
-    tm *ptmNow;
 
-    if (useLocalTime)
-    {
-        ptmNow = localtime(&ttNow);
-    }
-    else
-    {
-        ptmNow = gmtime(&ttNow);
-    }
-    int Year = ptmNow->tm_year + 1900;
-    int Month = ptmNow->tm_mon + 1;
-    int Day = ptmNow->tm_mday;
-
-    int Hour = ptmNow->tm_hour;
-    int Min = ptmNow->tm_min;
-    int Sec = ptmNow->tm_sec;
-
-    static DateTime now(Year, Month, Day, Hour, Min, Sec);
-    return now;
-}
-DateTime &DateTime::getToday(bool useLocalTime)
-{
-    time_t ttNow = time(0);
-    tm *ptmNow;
-
-    if (useLocalTime)
-    {
-        ptmNow = localtime(&ttNow);
-    }
-    else
-    {
-        ptmNow = gmtime(&ttNow);
-    }
-    int Year = ptmNow->tm_year + 1900;
-    int Month = ptmNow->tm_mon + 1;
-    int Day = ptmNow->tm_mday;
-
-    int Hour = ptmNow->tm_hour;
-    int Min = ptmNow->tm_min;
-    int Sec = ptmNow->tm_sec;
-
-    static DateTime now(Year, Month, Day, Hour, Min, Sec);
-    return now;
-}
 DateTime &DateTime::UtcNow()
 {
-    return getNow(false);
+    static DateTime now;
+    const std::time_t current = std::time(nullptr);
+    now = DateTime(static_cast<long>(current));
+    return now;
 }
-DateTime &DateTime::Now()
-{
-    return getNow(true);
-}
-DateTime &DateTime::Today()
-{
-    return getToday(true);
-}
+
 DateTime &DateTime::UtcToday()
 {
-    return getToday(false);
-}
-string DateTime::toString()
-{
-    return to_string(m_year) + "-" + to_string(m_month) + "-" + to_string(m_day) +
-           " " + to_string(m_hour) + ":" + to_string(m_min) + ":" + to_string(m_sec);
-}
-DateTime DateTime::ToUniversalTime()
-{
-    // convert to timestamp
-    tm t = ToTm();
-
-    // substract hours*timezone
-    t.tm_hour -= m_timezone;
-    time_t time_t_after = portable_timegm(&t);  // Use portable_timegm for UTC
-    tm tm_after = *gmtime(&time_t_after);  // Use gmtime for UTC
-
-    DateTime dt(tm_after.tm_year + 1900, tm_after.tm_mon + 1,
-                tm_after.tm_mday, tm_after.tm_hour, tm_after.tm_min, tm_after.tm_sec, m_millisec);
-    return dt;
+    static DateTime today;
+    const std::time_t current = std::time(nullptr);
+    today = DateTime(static_cast<long>(current));
+    return today;
 }
 
-long DateTime::ToTimestamp()
+std::string DateTime::toString() const
 {
-    tm Tm = ToTm();
-    time_t t = portable_timegm(&Tm);  // Use portable_timegm for UTC
-    long stamp = static_cast<long int>(t);
-    return stamp;
+    std::ostringstream oss;
+    oss << std::setfill('0')
+        << std::setw(4) << m_year << '-'
+        << std::setw(2) << m_month << '-'
+        << std::setw(2) << m_day << ' '
+        << std::setw(2) << m_hour << ':'
+        << std::setw(2) << m_min << ':'
+        << std::setw(2) << m_sec;
+    return oss.str();
 }
 
-tm DateTime::ToTm()
+DateTime DateTime::ToUniversalTime() const
 {
-    tm t;
+    return *this;
+}
+
+long DateTime::ToTimestamp() const
+{
+    return static_cast<long>(timestamp_from_components(m_year, m_month, m_day, m_hour, m_min, m_sec));
+}
+
+time_t DateTime::ToTime_t() const
+{
+    return static_cast<time_t>(ToTimestamp());
+}
+
+std::tm DateTime::ToTm() const
+{
+    std::tm t{};
     t.tm_year = m_year - 1900;
     t.tm_mon = m_month - 1;
     t.tm_mday = m_day;
@@ -173,37 +174,15 @@ tm DateTime::ToTm()
     return t;
 }
 
-bool DateTime::operator<=(DateTime &dt)
+bool DateTime::operator<=(const DateTime &dt) const
 {
     return ToTimestamp() <= dt.ToTimestamp();
 }
-time_t DateTime::ToTime_t()
-{
-    tm Tm = ToTm();
-    time_t t = portable_timegm(&Tm);  // Use portable_timegm for UTC
-    return t;
-}
 
-DateTime DateTime::AddSeconds(int seconds)
+DateTime DateTime::AddSeconds(int seconds) const
 {
-    tm t = ToTm();
-    t.tm_sec += seconds;
-    time_t time_t_after = portable_timegm(&t);  // Use portable_timegm for UTC
-    tm tm_after = *gmtime(&time_t_after);  // Use gmtime for UTC
-
-    DateTime dt(tm_after.tm_year + 1900, tm_after.tm_mon + 1,
-                tm_after.tm_mday, tm_after.tm_hour, tm_after.tm_min, tm_after.tm_sec, m_millisec);
-    return dt;
-}
-DateTime DateTime::AddMins(int mins)
-{
-    return AddSeconds(mins * 60);
-}
-DateTime DateTime::AddHours(int hours)
-{
-    return AddSeconds(hours * 3600);
-}
-DateTime DateTime::AddDays(int days)
-{
-    return AddSeconds(days * 24 * 3600);
+    const long long updated = static_cast<long long>(ToTimestamp()) + static_cast<long long>(seconds);
+    DateTime result(static_cast<long>(updated));
+    result.m_millisec = m_millisec;
+    return result;
 }

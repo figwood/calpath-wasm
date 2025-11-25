@@ -13,8 +13,8 @@ CRegion::~CRegion()
 }
 void CRegion::Init()
 {
-    m_StartTime = &DateTime::Today();
-    m_StopTime = &DateTime::Today();
+    m_StartTime = &DateTime::UtcToday();
+    m_StopTime = &DateTime::UtcToday();
     m_pGeometry = vector<MyPoint>(0);
     // Initialize Sensor using default constructor
     m_Sensor = Sensor("", "");

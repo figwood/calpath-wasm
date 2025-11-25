@@ -20,7 +20,7 @@ public:
         long StartTime, long EndTime,int StepTimeInSec){
         Satellite sat(SatID, SatName);
         sat.SetCurTLE("", line1, line2);
-        return sat.ComputeTrack(StartTime, EndTime,StepTimeInSec);
+        return sat.ComputeTrack(DateTime(StartTime), DateTime(EndTime), StepTimeInSec);
     }
     // Calculate sensor coverage regions within a target area and time range
     // Parameters: StartTime, EndTime are Unix timestamps in UTC
