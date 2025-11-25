@@ -5,7 +5,7 @@
   - `Satellite.h/cpp`: Satellite orbit calculation
   - `Sensor.h/cpp`: Sensor model
   - `CRegion.h/cpp`: Region calculation
-  - `orbitTools/`: Orbit calculation library
+  - `orbitTools/`: Orbit calculation library (from [Zeptomoby Satellite Library](http://www.zeptomoby.com/satellites/))
 - `index.html`: Web frontend interface
 - `CMakeLists.txt`: Build configuration file
 
@@ -34,3 +34,7 @@ You can also run `./rebuild_and_serve.sh` to perform the full clean build and la
 ## Testing
 
 Automated tests are not yet implemented. Run `./rebuild_and_serve.sh`, open `http://localhost:8082`, and validate functionality via the browser interface.
+
+## Acknowledgments
+
+The `orbitTools` library is from the [Zeptomoby Satellite Library](http://www.zeptomoby.com/satellites/). Special thanks to Michael F. Henry for providing this excellent orbit calculation library.
