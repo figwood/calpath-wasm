@@ -11,7 +11,7 @@
 
 ## Tech Stack
 
-- C++14
+- C++17
 - Emscripten
 - WebAssembly
 - HTML5/CSS3/JavaScript

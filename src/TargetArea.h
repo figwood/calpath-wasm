@@ -60,6 +60,8 @@ class TargetArea
     TargetArea(string ID);
     TargetArea(); // Default constructor for JavaScript
     TargetArea(double left, double right, double top, double bottom); // Constructor with boundaries for JavaScript
+    TargetArea(const TargetArea& other); // Copy constructor (Rule of Three: owns Color* members)
+    TargetArea& operator=(const TargetArea& other); // Assignment operator
     ~TargetArea();
 };
 #endif

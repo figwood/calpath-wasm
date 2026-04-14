@@ -108,3 +108,40 @@ TargetArea::~TargetArea()
     delete m_AreaColor;
     delete m_OutLineColor;
 }
+
+// Copy constructor: deep-copy the owned Color* members to prevent double-free
+TargetArea::TargetArea(const TargetArea& other)
+    : m_Name(other.m_Name),
+      m_ID(other.m_ID),
+      m_Geometry(other.m_Geometry),
+      m_OutLineWidth(other.m_OutLineWidth),
+      m_Checked(other.m_Checked),
+      m_Left(other.m_Left),
+      m_Right(other.m_Right),
+      m_Top(other.m_Top),
+      m_Bottom(other.m_Bottom),
+      m_AreaColor(other.m_AreaColor ? new Color(*other.m_AreaColor) : nullptr),
+      m_OutLineColor(other.m_OutLineColor ? new Color(*other.m_OutLineColor) : nullptr)
+{
+}
+
+// Assignment operator: deep-copy the owned Color* members
+TargetArea& TargetArea::operator=(const TargetArea& other)
+{
+    if (this != &other) {
+        delete m_AreaColor;
+        delete m_OutLineColor;
+        m_Name = other.m_Name;
+        m_ID = other.m_ID;
+        m_Geometry = other.m_Geometry;
+        m_OutLineWidth = other.m_OutLineWidth;
+        m_Checked = other.m_Checked;
+        m_Left = other.m_Left;
+        m_Right = other.m_Right;
+        m_Top = other.m_Top;
+        m_Bottom = other.m_Bottom;
+        m_AreaColor = other.m_AreaColor ? new Color(*other.m_AreaColor) : nullptr;
+        m_OutLineColor = other.m_OutLineColor ? new Color(*other.m_OutLineColor) : nullptr;
+    }
+    return *this;
+}
